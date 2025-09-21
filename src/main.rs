@@ -16,7 +16,7 @@ async fn main() {
     loop {
         clear_background(BLACK);
 
-        level.run();
+        level.run().await;
         next_frame().await
     }
 }
