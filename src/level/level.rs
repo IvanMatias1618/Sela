@@ -1,5 +1,4 @@
 use crate::Player;
-use crate::SpriteType;
 use crate::Tile;
 use crate::settings::{Map, settings};
 use crate::sprites::Sprites;

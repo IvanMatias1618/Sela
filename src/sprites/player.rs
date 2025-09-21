@@ -1,5 +1,4 @@
 use crate::Sprites;
-use crate::Tile;
 use crate::sprites::SpriteType;
 use macroquad::input::*;
 use macroquad::math::Vec2;
