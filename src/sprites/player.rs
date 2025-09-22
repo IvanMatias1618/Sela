@@ -1,5 +1,4 @@
 use crate::Sprites;
-use crate::sprites::SpriteType;
 use macroquad::input::*;
 use macroquad::math::Vec2;
 use macroquad::prelude::*;
@@ -9,7 +8,6 @@ pub struct Player {
     hitbox: Rect,
     pub rect: Rect,
     texture: Texture2D,
-    group: SpriteType,
     dir: Vec2,
     speed: u8,
 }
@@ -23,7 +21,6 @@ impl Player {
             hitbox,
             rect,
             texture,
-            group: SpriteType::Player,
             dir,
             speed: 4,
         }

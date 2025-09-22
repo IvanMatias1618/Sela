@@ -19,12 +19,9 @@ impl Sprites {
         match self {
             Sprites::Tile(tile) => tile.draw(pos),
             Sprites::Player(player) => {
-                let pos_adjustment = (
-                    pos.0 - 200.0 - player.rect.w / 2.0,
-                    pos.1 - 200.0 - player.rect.h / 2.0,
-                );
+                //let adjust_pos = (pos.0 - 12.0, pos.1 - 140.0);
                 player.draw(pos);
-            } // Sprites::Obstacle(obs) => obs.draw(),
+            }
         }
     }
     pub fn y(&self) -> f32 {

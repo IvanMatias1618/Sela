@@ -1,6 +1,7 @@
 mod level;
 mod settings;
 mod sprites;
+mod support;
 
 use level::Level;
 use macroquad::prelude::*;
@@ -8,6 +9,7 @@ use settings::debug;
 pub use sprites::player::Player;
 pub use sprites::sprite::*;
 pub use sprites::tile::Tile;
+pub use support::FUNC_MAP;
 
 #[macroquad::main("Sela")]
 async fn main() {

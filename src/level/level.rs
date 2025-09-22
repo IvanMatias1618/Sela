@@ -1,4 +1,6 @@
+use crate::FUNC_MAP;
 use crate::Player;
+use crate::SpriteType;
 use crate::Tile;
 use crate::settings::{Map, settings};
 use crate::sprites::Sprites;
@@ -12,24 +14,68 @@ pub struct Level {
     map: Map,
     camera: YsortCamera,
     sprites: Vec<Sprites>,
+    background: Texture2D,
+    background_rect: Rect,
 }
 
 impl Level {
     pub async fn new() -> Level {
+        let background = load_texture("./assets/mapa0.png").await.unwrap();
+        let background_rect = Rect::new(0.0, 0.0, background.width(), background.height());
         let mut level = Level {
             map: Map::mapa1(),
             camera: YsortCamera::new(),
             sprites: Vec::new(),
+            background,
+            background_rect,
         };
-        YsortCamera::draw(&mut level).await;
+        //YsortCamera::draw(&mut level).await;
+        level.create_level().await;
         return level;
+    }
+
+    async fn create_map(&mut self) {
+        let size = (settings::TILESIZE as f32, settings::TILESIZE as f32);
+        let mut origin_x: f32 = 0.0;
+        let mut origin_y: f32 = 0.0;
+
+        if let Some(func) = FUNC_MAP.get("boundary") {
+            let map = func("./assets/mapa0/mapa1_colisiones.csv");
+
+            for row in map.iter() {
+                for n in row.iter() {
+                    match *n {
+                        7 => {
+                            let surf = Vec2::new(origin_x, origin_y);
+                            let texture = Some(load_texture("./assets/rock.png").await.unwrap());
+                            let tile = Tile::new(SpriteType::Obstacle, surf, texture).await;
+                            self.sprites.push(Sprites::Tile(tile));
+                        }
+                        _ => (),
+                    }
+                    origin_x += size.0;
+                }
+                origin_x = 0.0;
+                origin_y += size.1;
+            }
+        }
+    }
+
+    async fn create_level(&mut self) {
+        self.create_map().await;
+        let rect = Rect::new(1200.0, 1200.0, 128.0, 128.0);
+        let player = Player::new(rect).await;
+        self.sprites.push(Sprites::Player(player));
     }
     pub async fn run(&mut self) {
         if is_key_down(KeyCode::K) {
             panic!("Closing the game");
         }
         println!("level");
-        self.camera.run_draw(&mut self.sprites).await;
+
+        self.camera
+            .run_draw(&self.background, &self.background_rect, &mut self.sprites)
+            .await;
     }
 }
 
@@ -47,61 +93,44 @@ impl YsortCamera {
             half_w: screen_width() / 2.0,
         }
     }
-
-    pub async fn run_draw(&mut self, sprites: &mut [Sprites]) {
-        if let Some(pos) = sprites.iter().find_map(|sprite| {
-            if let Sprites::Player(p) = sprite {
-                Some(Vec2 {
-                    x: p.rect.x,
-                    y: p.rect.y,
-                })
+    pub async fn run_draw(
+        &mut self,
+        back: &Texture2D,
+        back_rect: &Rect,
+        sprites: &mut Vec<Sprites>,
+    ) {
+        // 1. Offset de cámara pixel-perfect
+        if let Some(p) = sprites.iter().find_map(|s| {
+            if let Sprites::Player(p) = s {
+                Some(p)
             } else {
                 None
             }
         }) {
-            self.offset = pos;
+            //       self.offset.x = (p.rect.x + p.rect.w / 2.0).floor();
+            //self.offset.y = p.rect.y.floor();
+            self.offset.x = (p.rect.x + p.rect.w / 2.0).floor();
+            // Aplica un desplazamiento vertical de 50 píxeles
+            const CAMERA_Y_SHIFT: f32 = 150.0;
+            self.offset.y = (p.rect.y).floor() + CAMERA_Y_SHIFT;
         }
 
+        // 2. Fondo
+        let bg_x = (back_rect.x - self.offset.x + self.half_w).floor();
+        let bg_y = (back_rect.y - self.offset.y + self.half_h).floor();
+        draw_texture(back, bg_x, bg_y, WHITE);
+
+        // 3. Profundidad
         YsortCamera::y_sort(sprites);
+        let obstacles = sprites.clone();
 
-        let adjustment_x = 0.0;
-        let adjustment_y = 200.0;
-        let obstacles = sprites.to_vec();
+        // 4. Sprites pixel-snapped
         for sprite in sprites.iter_mut() {
-            let pos = (
-                sprite.x() - self.offset.x + self.half_w - sprite.w() + adjustment_x,
-                sprite.y() - self.offset.y + self.half_h - sprite.h() + adjustment_y,
-            );
-            sprite.draw(pos);
+            let sx = (sprite.x() - self.offset.x + self.half_w + 12.0/* Ajuste */).floor();
+            let sy = (sprite.y() - self.offset.y + self.half_h + 140.0/* Ajuste */).floor();
+
+            sprite.draw((sx, sy));
             sprite.update(&obstacles);
-        }
-    }
-
-    pub async fn draw(level: &mut Level) {
-        let size = (settings::TILESIZE as f32, settings::TILESIZE as f32);
-        let mut origin_x: f32 = 0.0;
-        let mut origin_y: f32 = 0.0;
-
-        for row in &level.map.map {
-            for tile in row {
-                match *tile {
-                    "x" => {
-                        let rect = Rect::new(origin_x, origin_y, size.0, size.1);
-                        let tile = Tile::new(rect).await;
-                        level.sprites.push(Sprites::Tile(tile));
-                    }
-                    "o" => draw_rectangle(origin_x, origin_y, size.0, size.1, BLACK),
-                    "p" => {
-                        let rect = Rect::new(origin_x, origin_y, size.0, size.1);
-                        let player = Player::new(rect).await;
-                        level.sprites.push(Sprites::Player(player));
-                    }
-                    _ => (),
-                }
-                origin_x += size.0;
-            }
-            origin_x = 0.0;
-            origin_y += size.1;
         }
     }
 
