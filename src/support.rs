@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use walkdir::WalkDir;
 
 use csv::Reader;
-use std::error::Error;
 use std::fs::File;
 
 pub static FUNC_MAP: Lazy<HashMap<&'static str, fn(&'static str) -> Vec<Vec<i32>>>> =
