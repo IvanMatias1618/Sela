@@ -1,17 +1,22 @@
-use crate::FUNC_MAP;
 use crate::Player;
 use crate::SpriteType;
 use crate::Tile;
-use crate::settings::{Map, settings};
+use crate::settings::settings;
 use crate::sprites::Sprites;
+use crate::{FUNC_MAP, import_folder};
+
 use macroquad::input::*;
 use macroquad::math::Rect;
 use macroquad::math::Vec2;
 use macroquad::prelude::*;
+use macroquad::rand::ChooseRandom;
 use macroquad::window::{screen_height, screen_width};
 
+pub fn pick_random_path(images: &Vec<String>) -> Option<&String> {
+    images.choose()
+}
+
 pub struct Level {
-    map: Map,
     camera: YsortCamera,
     sprites: Vec<Sprites>,
     background: Texture2D,
@@ -23,7 +28,6 @@ impl Level {
         let background = load_texture("./assets/mapa0.png").await.unwrap();
         let background_rect = Rect::new(0.0, 0.0, background.width(), background.height());
         let mut level = Level {
-            map: Map::mapa1(),
             camera: YsortCamera::new(),
             sprites: Vec::new(),
             background,
@@ -36,27 +40,63 @@ impl Level {
 
     async fn create_map(&mut self) {
         let size = (settings::TILESIZE as f32, settings::TILESIZE as f32);
-        let mut origin_x: f32 = 0.0;
-        let mut origin_y: f32 = 0.0;
+        //let mut origin_x: f32 = 0.0;
+        //let mut origin_y: f32 = 0.0;
+        //new
+        for (style, layout) in FUNC_MAP.iter() {
+            let mut origin_x: f32 = 0.0;
+            let mut origin_y: f32 = 0.0;
+            if let Some(_) = FUNC_MAP.get(*style) {
+                if *style == "boundary" {
+                    let map = layout("./assets/map0/mapa0_colisiones.csv");
 
-        if let Some(func) = FUNC_MAP.get("boundary") {
-            let map = func("./assets/mapa0/mapa1_colisiones.csv");
-
-            for row in map.iter() {
-                for n in row.iter() {
-                    match *n {
-                        7 => {
-                            let surf = Vec2::new(origin_x, origin_y);
-                            let texture = Some(load_texture("./assets/rock.png").await.unwrap());
-                            let tile = Tile::new(SpriteType::Obstacle, surf, texture).await;
-                            self.sprites.push(Sprites::Tile(tile));
+                    for row in map.iter() {
+                        for n in row.iter() {
+                            match *n {
+                                7 => {
+                                    let surf = Vec2::new(origin_x, origin_y);
+                                    //let texture =
+                                    //Some(load_texture("./assets/rock.png").await.unwrap());
+                                    let tile = Tile::new(SpriteType::Obstacle, surf, None).await;
+                                    self.sprites.push(Sprites::Tile(tile));
+                                }
+                                _ => (),
+                            }
+                            origin_x += size.0;
                         }
-                        _ => (),
+                        origin_x = 0.0;
+                        origin_y += size.1;
                     }
-                    origin_x += size.0;
+                } else if *style == "grass" {
+                    let map = layout("./assets/map0/mapa0_vegetacion.csv");
+                    let images = import_folder("./assets/flowers/");
+
+                    for row in map.iter() {
+                        for n in row.iter() {
+                            match *n {
+                                -1 => (),
+                                _ => {
+                                    let surf = Vec2::new(origin_x, origin_y);
+                                    if let Some(image) = pick_random_path(&images) {
+                                        let texture = Some(load_texture(image).await.unwrap());
+                                        let tile =
+                                            Tile::new(SpriteType::Obstacle, surf, texture).await;
+                                        self.sprites.push(Sprites::Tile(tile));
+                                    } else {
+                                        let texture =
+                                            Some(load_texture("./assets/rock.png").await.unwrap());
+                                        let tile =
+                                            Tile::new(SpriteType::Obstacle, surf, texture).await;
+                                        self.sprites.push(Sprites::Tile(tile));
+                                    }
+                                }
+                            }
+                            origin_x += size.0;
+                        }
+                        origin_x = 0.0;
+                        origin_y += size.1;
+                    }
                 }
-                origin_x = 0.0;
-                origin_y += size.1;
             }
         }
     }

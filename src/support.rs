@@ -1,5 +1,6 @@
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
+use walkdir::WalkDir;
 
 use csv::Reader;
 use std::error::Error;
@@ -11,6 +12,10 @@ pub static FUNC_MAP: Lazy<HashMap<&'static str, fn(&'static str) -> Vec<Vec<i32>
 
         m.insert(
             "boundary",
+            import_csv_layout as fn(&'static str) -> Vec<Vec<i32>>,
+        );
+        m.insert(
+            "grass",
             import_csv_layout as fn(&'static str) -> Vec<Vec<i32>>,
         );
         m
@@ -41,4 +46,13 @@ fn import_csv_layout(path: &'static str) -> Vec<Vec<i32>> {
         eprintln!("No se pudo abrir el archivo: {}", path);
     }
     map
+}
+
+pub fn import_folder(path: &str) -> Vec<String> {
+    WalkDir::new(path)
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|entry| entry.path() != std::path::Path::new(path)) // excluye el directorio raíz
+        .map(|entry| entry.path().display().to_string())
+        .collect()
 }
